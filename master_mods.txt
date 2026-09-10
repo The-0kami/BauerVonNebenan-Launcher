@@ -1,1 +1,43 @@
+# ============================================================
+# BAUER VON NEBENAN - Modliste
+# Ein Eintrag pro Zeile.
+#
+# Unterstuetzte Quellen:
+#   modhub:368541
+#   github:User/Repository
+#   https://example.com/FS25_Mod.zip
+# ============================================================
+
+modhub:368541
+modhub:369912
+modhub:369934
+modhub:371021
+modhub:362333
+modhub:366595
+modhub:370315
+modhub:367390
+modhub:362332
+modhub:354067
+modhub:359752
+modhub:367607
+modhub:369002
+modhub:328619
+modhub:330807
+modhub:366961
+modhub:365222
+modhub:369987
+modhub:367777
+modhub:360448
+modhub:332533
+modhub:367658
+modhub:366339
+modhub:344192
+modhub:303378
+modhub:354574
+modhub:311912
+modhub:332838
+modhub:355179
+modhub:359722
+modhub:308809
+modhub:357192
 
