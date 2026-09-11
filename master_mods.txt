@@ -47,3 +47,4 @@ https://github.com/Stephan-S/FS25_AutoDrive?tab=readme-ov-file
 modhub:361679
 modhub:344901
 modhub:370597
+https://github.com/templeton-peck/fs25_cabcinematic
