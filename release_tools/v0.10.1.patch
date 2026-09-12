@@ -1,0 +1,222 @@
+diff --git a/BauerVonNebenan/BauerVonNebenan_Launcher.ps1 b/BauerVonNebenan/BauerVonNebenan_Launcher.ps1
+--- a/BauerVonNebenan/BauerVonNebenan_Launcher.ps1	2026-09-12 16:34:20.000000000 +0000
++++ b/BauerVonNebenan/BauerVonNebenan_Launcher.ps1	2026-09-12 16:48:31.202058975 +0000
+@@ -1,4 +1,4 @@
+-# Bauer von Nebenan - Agriculture Science Launcher v0.10.0
++# Bauer von Nebenan - Agriculture Science Launcher v0.10.1
+ # PowerShell 5.1+ (Windows) / PowerShell 7+ (macOS)
+ 
+ param(
+@@ -15,7 +15,7 @@
+ $ErrorActionPreference = 'Stop'
+ $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+ $script:UseColors = $true
+-$script:LauncherVersion = '0.10.0'
++$script:LauncherVersion = '0.10.1'
+ 
+ if (-not [string]::IsNullOrWhiteSpace($SteamCommandBase64)) {
+     try {
+@@ -129,6 +129,70 @@
+     return [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))
+ }
+ 
++function Ensure-SteamLaunchOptionFile {
++    if (-not $IsWindows -and $PSVersionTable.PSVersion.Major -ge 6) { return }
++    $target = Join-Path $ScriptRoot 'Steam_Startoption.txt'
++    if (Test-Path -LiteralPath $target) { return }
++
++    $bat = Join-Path $ScriptRoot 'Start_BauerVonNebenan.bat'
++    $line = ('"{0}" %command%' -f $bat)
++    $content = @(
++        'AGRICULTURE SCIENCE // STEAM STARTOPTION',
++        '',
++        'Diese Zeile in Steam unter:',
++        'Eigenschaften -> Allgemein -> Startoptionen',
++        '',
++        $line,
++        '',
++        'Hinweis: Wenn der Launcher-Ordner verschoben wird, diese Datei loeschen.',
++        'Beim naechsten Start wird sie mit dem neuen Pfad erneut erzeugt.'
++    ) -join [Environment]::NewLine
++
++    [IO.File]::WriteAllText($target, $content, (New-Object System.Text.UTF8Encoding($false)))
++    Write-ColorLine '[STEAM] Steam_Startoption.txt wurde einmalig erzeugt.' Cyan
++}
++
++function Invoke-StrictModQuarantine {
++    param(
++        [string]$ModFolder,
++        [string[]]$AllowedFileNames,
++        [string]$QuarantineRoot
++    )
++
++    if (-not (Test-Path -LiteralPath $ModFolder)) { return @() }
++
++    $allowed = @{}
++    foreach ($name in @($AllowedFileNames)) {
++        if ([string]::IsNullOrWhiteSpace([string]$name)) { continue }
++        $allowed[[string]$name.ToLowerInvariant()] = $true
++    }
++
++    $extras = @(
++        Get-ChildItem -LiteralPath $ModFolder -File -Filter '*.zip' |
++        Where-Object { -not $allowed.ContainsKey($_.Name.ToLowerInvariant()) }
++    )
++    if ($extras.Count -eq 0) { return @() }
++
++    $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
++    $destination = Join-Path $QuarantineRoot $stamp
++    New-Item -ItemType Directory -Path $destination -Force | Out-Null
++
++    $moved = New-Object System.Collections.Generic.List[string]
++    foreach ($file in $extras) {
++        $dest = Join-Path $destination $file.Name
++        Move-Item -LiteralPath $file.FullName -Destination $dest -Force
++        $moved.Add($file.Name)
++    }
++
++    Write-Host ''
++    Write-ColorLine '[STRICT] Lokale Mods ausserhalb der Masterliste wurden aus dem aktiven Modordner entfernt.' DarkYellow
++    Write-ColorLine ("[STRICT] Quarantaene: {0}" -f $destination) Gray
++    foreach ($name in $moved) { Write-ColorLine ("  [QUARANTAENE] {0}" -f $name) DarkYellow }
++    Write-Host ''
++
++    return $moved.ToArray()
++}
++
+ function Resolve-LaunchTarget {
+     param(
+         [string]$LaunchMode,
+@@ -1058,6 +1122,8 @@
+ $script:UseColors = Convert-ToBool (Get-ConfigValue $config 'Flavor' 'UseColors' 'true') $true
+ if ($ShowSplashScreen) { Show-Splash } else { Clear-Host }
+ 
++Ensure-SteamLaunchOptionFile
++
+ if (-not (Test-Path $modsPath)) { Show-PathError 'mods.txt' $modsPath 'Modliste fehlt.' }
+ 
+ $GameExe = Expand-ConfigPath (Get-ConfigValue $config 'Paths' 'GameExe' '')
+@@ -1100,10 +1166,16 @@
+ $UseRemoteModList = Convert-ToBool (Get-ConfigValue $config 'Remote' 'UseRemoteModList' 'true') $true
+ $UseCachedRemoteModListOnError = Convert-ToBool (Get-ConfigValue $config 'Remote' 'UseCachedRemoteModListOnError' 'true') $true
+ $RemoteModListMode = Get-ConfigValue $config 'Remote' 'RemoteModListMode' 'Additive'
+-if ($RemoteModListMode -ne 'Additive') {
+-    Write-ColorLine '[REMOTE-WARNUNG] RemoteModListMode ist derzeit nur als Additive implementiert. Verwende Additive.' Yellow
+-    $RemoteModListMode = 'Additive'
++switch ($RemoteModListMode.Trim().ToLowerInvariant()) {
++    'additive' { $RemoteModListMode = 'Additive' }
++    'strict'   { $RemoteModListMode = 'Strict' }
++    default {
++        Write-ColorLine ("[REMOTE-WARNUNG] Unbekannter RemoteModListMode '{0}'. Verwende Additive." -f $RemoteModListMode) Yellow
++        $RemoteModListMode = 'Additive'
++    }
+ }
++$StrictQuarantineFolderRaw = Get-ConfigValue $config 'Remote' 'StrictQuarantineFolder' 'strict_quarantine'
++$StrictQuarantineFolder = if ([IO.Path]::IsPathRooted($StrictQuarantineFolderRaw)) { Expand-ConfigPath $StrictQuarantineFolderRaw } else { Join-Path $ScriptRoot $StrictQuarantineFolderRaw }
+ 
+ try {
+     $launchTarget = Resolve-LaunchTarget -LaunchMode $LaunchMode -ConfiguredGameExe $GameExe
+@@ -1168,11 +1240,23 @@
+         Write-ColorLine ("[REMOTE-WARNUNG] Master-Modliste enthaelt {0} ungueltige Eintraege." -f @($remoteListData.Invalid).Count) Yellow
+     }
+ }
+-$sources = @(Merge-ModSourcesAdditive -LocalSources $localSources -RemoteSources $remoteSources)
++if ($RemoteModListMode -eq 'Strict' -and $remoteSources.Count -gt 0) {
++    $sources = @($remoteSources)
++} else {
++    $sources = @(Merge-ModSourcesAdditive -LocalSources $localSources -RemoteSources $remoteSources)
++}
+ Show-InvalidSourceSummary $invalidSources
+ if ($DetectDuplicates) { Show-DuplicateSummary $duplicates }
+ if ($remoteSources.Count -gt 0) {
+-    Write-ColorLine ("[REMOTE] {0} Master-Modquellen aktiv; additive Synchronisierung." -f $remoteSources.Count) Cyan
++    if ($RemoteModListMode -eq 'Strict') {
++        Write-ColorLine ("[REMOTE] {0} Master-Modquellen aktiv; STRICT-Synchronisierung." -f $remoteSources.Count) DarkYellow
++        Write-ColorLine '[STRICT] Nur Mods aus der Masterliste bleiben im aktiven Modordner. Extras werden in Quarantaene verschoben.' DarkYellow
++        if ($localSources.Count -gt 0) {
++            Write-ColorLine '[STRICT] Lokale mods.txt-Eintraege ausserhalb der Masterliste werden fuer diesen Lauf ignoriert.' Gray
++        }
++    } else {
++        Write-ColorLine ("[REMOTE] {0} Master-Modquellen aktiv; additive Synchronisierung." -f $remoteSources.Count) Cyan
++    }
+     Write-Host ''
+ }
+ 
+@@ -1192,12 +1276,14 @@
+ $checked=0; $current=0; $new=0; $updated=0; $failed=0
+ $changes = New-Object System.Collections.Generic.List[object]
+ $failures = New-Object System.Collections.Generic.List[object]
++$strictAllowedFiles = New-Object System.Collections.Generic.List[string]
+ 
+ foreach ($source in $sources) {
+     $checked++
+     Write-ColorLine ("[{0}/{1}] Pruefe {2}" -f $checked, $sources.Count, $source) DarkGray
+     try {
+         $meta = Get-SourceMetadata $source
++        if ($RemoteModListMode -eq 'Strict') { $strictAllowedFiles.Add([string]$meta.FileName) }
+         $target = Join-Path $ModFolder $meta.FileName
+         $oldState = $state[$source]
+         $oldFile = $null
+@@ -1274,6 +1360,17 @@
+ 
+ Save-State $state $statePath
+ 
++$strictQuarantined = @()
++if ($RemoteModListMode -eq 'Strict') {
++    if ($remoteSources.Count -eq 0) {
++        Write-ColorLine '[STRICT-WARNUNG] Keine Master-Modliste verfuegbar. Aus Sicherheitsgruenden wurde NICHT aufgeraeumt.' Yellow
++    } elseif ($failed -gt 0) {
++        Write-ColorLine '[STRICT-WARNUNG] Mindestens eine Master-Modquelle ist fehlgeschlagen. Quarantaene wurde NICHT ausgefuehrt.' Yellow
++    } else {
++        $strictQuarantined = @(Invoke-StrictModQuarantine -ModFolder $ModFolder -AllowedFileNames $strictAllowedFiles.ToArray() -QuarantineRoot $StrictQuarantineFolder)
++    }
++}
++
+ # --------------------------- REPORT ---------------------------
+ Write-Host ''
+ Write-ColorLine '================================================================' White
+@@ -1287,6 +1384,9 @@
+ Write-ColorLine ("Fehler:               {0}" -f $failed) $(if($failed -gt 0){'Red'}else{'Green'})
+ Write-ColorLine ("Doppelte Eintraege:   {0}" -f $duplicates.Count) $(if($duplicates.Count -gt 0){'DarkYellow'}else{'Green'})
+ Write-ColorLine ("Ungueltige Eintraege: {0}" -f $invalidSources.Count) $(if($invalidSources.Count -gt 0){'Yellow'}else{'Green'})
++if ($RemoteModListMode -eq 'Strict') {
++    Write-ColorLine ("Strict-Quarantaene:   {0}" -f $strictQuarantined.Count) $(if($strictQuarantined.Count -gt 0){'DarkYellow'}else{'Green'})
++}
+ Write-Host ''
+ 
+ Invoke-DuplicateCleanupPrompt $modsPath $modListData.RawLines $duplicates $AskToCleanDuplicates $BackupBeforeCleanup
+diff --git a/BauerVonNebenan/README.txt b/BauerVonNebenan/README.txt
+--- a/BauerVonNebenan/README.txt	2026-09-12 16:34:20.000000000 +0000
++++ b/BauerVonNebenan/README.txt	2026-09-12 16:48:31.202824108 +0000
+@@ -415,3 +415,11 @@
+   Config = Steam ignorieren und GameExe verwenden
+ 
+ Hinweis: macOS-Steam-Wrapper ist noch experimentell und in dieser Version nicht aktiviert.
++
++
++v0.10.1
++-------
++- Erzeugt beim ersten Windows-Start automatisch Steam_Startoption.txt.
++- RemoteModListMode=Strict als Opt-in hinzugefuegt.
++- Additive bleibt Standard.
++- Strict verschiebt lokale Extra-ZIPs in strict_quarantine/<Zeitstempel> statt sie zu loeschen.
+diff --git a/BauerVonNebenan/config.ini b/BauerVonNebenan/config.ini
+--- a/BauerVonNebenan/config.ini	2026-09-12 16:34:20.000000000 +0000
++++ b/BauerVonNebenan/config.ini	2026-09-12 16:48:31.202430891 +0000
+@@ -107,10 +107,14 @@
+ # Bei GitHub-/Netzwerkfehlern die letzte erfolgreich geladene Masterliste verwenden
+ UseCachedRemoteModListOnError=true
+ 
+-# Die Masterliste arbeitet absichtlich additiv:
+-# Sie fuegt vorgeschriebene Mods hinzu/aktualisiert sie, loescht aber keine lokalen Extras.
++# Additive (Standard): Master-Mods werden hinzugefuegt/aktualisiert; lokale Extras bleiben erhalten.
++# Strict (Opt-in): Nur Master-Mods bleiben aktiv; lokale Extra-ZIPs werden in Quarantaene verschoben.
+ RemoteModListMode=Additive
+ 
++# Zielordner fuer Mods, die Strict aus dem aktiven Modordner entfernt.
++# Es wird pro Lauf automatisch ein Zeitstempel-Unterordner angelegt.
++StrictQuarantineFolder=strict_quarantine
++
+ [Mac]
+ # Wenn pwsh fehlt und Homebrew vorhanden ist, automatische Installation anbieten
+ OfferHomebrewInstall=true
