@@ -42,7 +42,6 @@ modhub:308866
 modhub:303889
 https://github.com/Stephan-S/FS25_AutoDrive?tab=readme-ov-file
 modhub:361679
-modhub:344901
 modhub:370597
 modhub:366174
 modhub:371144
