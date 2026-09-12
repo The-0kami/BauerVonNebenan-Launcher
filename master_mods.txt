@@ -8,7 +8,6 @@
 #   https://example.com/FS25_Mod.zip
 # ============================================================
 
-modhub:368541
 modhub:369912
 modhub:369934
 modhub:371021
@@ -30,7 +29,6 @@ modhub:367777
 modhub:360448
 modhub:332533
 modhub:367658
-modhub:366339
 modhub:344192
 modhub:303378
 modhub:354574
@@ -47,4 +45,22 @@ https://github.com/Stephan-S/FS25_AutoDrive?tab=readme-ov-file
 modhub:361679
 modhub:344901
 modhub:370597
-
+modhub:366174
+modhub:371144
+modhub:331515
+modhub:304463
+modhub:331933
+modhub:306489
+modhub:326441
+modhub:316411
+modhub:307883
+modhub:325409
+modhub:338159
+modhub:306015
+modhub:327359
+modhub:307474
+modhub:359062
+modhub:305153
+modhub:360560
+modhub:347536
+modhub:364383
