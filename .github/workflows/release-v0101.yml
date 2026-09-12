@@ -30,7 +30,7 @@ jobs:
           cd package
           git apply --check ../release_tools/v0.10.1.patch
           git apply ../release_tools/v0.10.1.patch
-          grep -F "$script:LauncherVersion = '0.10.1'" BauerVonNebenan/BauerVonNebenan_Launcher.ps1
+          grep -F '$script:LauncherVersion = '\''0.10.1'\''' BauerVonNebenan/BauerVonNebenan_Launcher.ps1
           grep -F "Ensure-SteamLaunchOptionFile" BauerVonNebenan/BauerVonNebenan_Launcher.ps1
           grep -F "Invoke-StrictModQuarantine" BauerVonNebenan/BauerVonNebenan_Launcher.ps1
           grep -F "StrictQuarantineFolder=strict_quarantine" BauerVonNebenan/config.ini
