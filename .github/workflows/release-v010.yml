@@ -1,0 +1,48 @@
+name: Build Agriculture Science v0.10.0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "release_tools/build_v010.py"
+      - ".github/workflows/release-v010.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download v0.9.1 base package
+        run: |
+          curl -fL \
+            "https://github.com/The-0kami/BauerVonNebenan-Launcher/releases/download/v0.9.1/BauerVonNebenan_AgricultureScience_Launcher_v0.9.1.zip" \
+            -o base-v0.9.1.zip
+
+      - name: Build v0.10.0
+        run: |
+          python release_tools/build_v010.py \
+            base-v0.9.1.zip \
+            BauerVonNebenan_AgricultureScience_Launcher_v0.10.0.zip
+          sha256sum BauerVonNebenan_AgricultureScience_Launcher_v0.10.0.zip
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v0.10.0 >/dev/null 2>&1; then
+            gh release upload v0.10.0 \
+              BauerVonNebenan_AgricultureScience_Launcher_v0.10.0.zip \
+              --clobber
+          else
+            gh release create v0.10.0 \
+              BauerVonNebenan_AgricultureScience_Launcher_v0.10.0.zip \
+              --target main \
+              --title "Agriculture Science Runtime v0.10.0" \
+              --notes "Windows Steam Wrapper integration. LaunchMode=Auto uses Steam's original %command% when available and falls back to GameExe when started manually. Steam handoff is preserved across future self-update restarts. macOS Steam wrapper remains experimental."
+          fi
