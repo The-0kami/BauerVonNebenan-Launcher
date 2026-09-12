@@ -72,3 +72,4 @@ modhub:352974
 modhub:344446
 modhub:327821
 https://raw.githubusercontent.com/The-0kami/FS25_EconomyRegionalization/main/FS25_EconomyRegionalization.zip
+modhub:365533
