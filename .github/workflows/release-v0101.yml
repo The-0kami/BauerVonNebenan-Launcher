@@ -1,0 +1,59 @@
+name: Build Agriculture Science v0.10.1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "release_tools/v0.10.1.patch"
+      - ".github/workflows/release-v0101.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download v0.10.0 base package
+        run: |
+          curl -fL \
+            "https://github.com/The-0kami/BauerVonNebenan-Launcher/releases/download/v0.10.0/BauerVonNebenan_AgricultureScience_Launcher_v0.10.0.zip" \
+            -o base-v0.10.0.zip
+          unzip -q base-v0.10.0.zip -d package
+
+      - name: Apply v0.10.1 patch
+        run: |
+          cd package
+          git apply --check ../release_tools/v0.10.1.patch
+          git apply ../release_tools/v0.10.1.patch
+          grep -F "$script:LauncherVersion = '0.10.1'" BauerVonNebenan/BauerVonNebenan_Launcher.ps1
+          grep -F "Ensure-SteamLaunchOptionFile" BauerVonNebenan/BauerVonNebenan_Launcher.ps1
+          grep -F "Invoke-StrictModQuarantine" BauerVonNebenan/BauerVonNebenan_Launcher.ps1
+          grep -F "StrictQuarantineFolder=strict_quarantine" BauerVonNebenan/config.ini
+
+      - name: Package v0.10.1
+        run: |
+          cd package
+          zip -qr ../BauerVonNebenan_AgricultureScience_Launcher_v0.10.1.zip BauerVonNebenan
+          cd ..
+          sha256sum BauerVonNebenan_AgricultureScience_Launcher_v0.10.1.zip
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v0.10.1 >/dev/null 2>&1; then
+            gh release upload v0.10.1 \
+              BauerVonNebenan_AgricultureScience_Launcher_v0.10.1.zip \
+              --clobber
+          else
+            gh release create v0.10.1 \
+              BauerVonNebenan_AgricultureScience_Launcher_v0.10.1.zip \
+              --target main \
+              --title "Agriculture Science Runtime v0.10.1" \
+              --notes "Steam_Startoption.txt is generated once on Windows. Adds opt-in RemoteModListMode=Strict while keeping Additive as the default. Strict synchronizes against the remote master list and moves local extra ZIP mods into timestamped strict_quarantine folders instead of deleting them."
+          fi
