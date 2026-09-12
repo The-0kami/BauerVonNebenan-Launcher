@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "release_tools/v0.10.1.patch"
+      - "release_tools/v0.10.1.zip.b64"
       - ".github/workflows/release-v0101.yml"
   workflow_dispatch:
 
@@ -18,28 +18,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download v0.10.0 base package
+      - name: Recreate v0.10.1 package
         run: |
-          curl -fL \
-            "https://github.com/The-0kami/BauerVonNebenan-Launcher/releases/download/v0.10.0/BauerVonNebenan_AgricultureScience_Launcher_v0.10.0.zip" \
-            -o base-v0.10.0.zip
-          unzip -q base-v0.10.0.zip -d package
-
-      - name: Apply v0.10.1 patch
-        run: |
-          cd package
-          git apply --check ../release_tools/v0.10.1.patch
-          git apply ../release_tools/v0.10.1.patch
-          grep -F "0.10.1" BauerVonNebenan/BauerVonNebenan_Launcher.ps1
-          grep -F "Ensure-SteamLaunchOptionFile" BauerVonNebenan/BauerVonNebenan_Launcher.ps1
-          grep -F "Invoke-StrictModQuarantine" BauerVonNebenan/BauerVonNebenan_Launcher.ps1
-          grep -F "StrictQuarantineFolder=strict_quarantine" BauerVonNebenan/config.ini
-
-      - name: Package v0.10.1
-        run: |
-          cd package
-          zip -qr ../BauerVonNebenan_AgricultureScience_Launcher_v0.10.1.zip BauerVonNebenan
-          cd ..
+          base64 -d release_tools/v0.10.1.zip.b64 > BauerVonNebenan_AgricultureScience_Launcher_v0.10.1.zip
+          unzip -p BauerVonNebenan_AgricultureScience_Launcher_v0.10.1.zip BauerVonNebenan/BauerVonNebenan_Launcher.ps1 | grep -F "0.10.1"
+          unzip -p BauerVonNebenan_AgricultureScience_Launcher_v0.10.1.zip BauerVonNebenan/BauerVonNebenan_Launcher.ps1 | grep -F "Ensure-SteamLaunchOptionFile"
+          unzip -p BauerVonNebenan_AgricultureScience_Launcher_v0.10.1.zip BauerVonNebenan/BauerVonNebenan_Launcher.ps1 | grep -F "Invoke-StrictModQuarantine"
+          unzip -p BauerVonNebenan_AgricultureScience_Launcher_v0.10.1.zip BauerVonNebenan/config.ini | grep -F "StrictQuarantineFolder=strict_quarantine"
           sha256sum BauerVonNebenan_AgricultureScience_Launcher_v0.10.1.zip
 
       - name: Publish release
