@@ -46,3 +46,5 @@ jobs:
               --title "Agriculture Science Runtime v0.10.0" \
               --notes "Windows Steam Wrapper integration. LaunchMode=Auto uses Steam's original %command% when available and falls back to GameExe when started manually. Steam handoff is preserved across future self-update restarts. macOS Steam wrapper remains experimental."
           fi
+
+# Triggered after release tooling was installed.
