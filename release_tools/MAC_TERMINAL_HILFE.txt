@@ -1,0 +1,42 @@
+AGRICULTURE SCIENCE // macOS Terminal-Hilfe
+===========================================
+
+Falls macOS die Start_BauerVonNebenan.command nach einem manuellen Update
+nicht starten will, diese Schritte verwenden.
+
+1) Terminal oeffnen.
+
+2) In den BauerVonNebenan-Ordner wechseln.
+   Am einfachsten: Im Terminal "cd " eingeben (mit Leerzeichen danach),
+   den BauerVonNebenan-Ordner aus dem Finder ins Terminal ziehen und Enter druecken.
+
+3) Ausfuehrungs-Bit setzen:
+
+   chmod +x "Start_BauerVonNebenan.command"
+
+4) Falls macOS die Datei weiterhin blockiert, Quarantaene-Attribut entfernen:
+
+   xattr -d com.apple.quarantine "Start_BauerVonNebenan.command" 2>/dev/null || true
+
+5) Zur Kontrolle:
+
+   ls -l "Start_BauerVonNebenan.command"
+
+   Am Anfang der Ausgabe sollte ein x bei den Rechten stehen, z. B.:
+   -rwxr-xr-x
+
+6) Danach die Datei wieder per Doppelklick starten.
+
+Bekannter Farming-Simulator-Pfad auf Jennys Mac:
+/Users/jenniferleipert/Library/Application Support/Steam/steamapps/common/Farming Simulator 25/Farming Simulator 2025.app
+
+Falls PowerShell direkt getestet werden soll:
+
+   pwsh -NoProfile -File "./BauerVonNebenan_Launcher.ps1"
+
+Hinweis:
+Das Entfernen von com.apple.quarantine ist nur fuer diese Launcher-Datei gedacht.
+Es wird hier bewusst kein rekursives xattr -cr auf ganze Ordner angewendet.
+
+AGRICULTURE SCIENCE
+Offiziell genehmigte Feldversuche seit vermutlich eben gerade.
