@@ -6,6 +6,7 @@ DevTools.RAYCAST_DISTANCE = 30
 DevTools.MAX_PARENT_DEPTH = 8
 DevTools.lastHit = nil
 DevTools.actionEventIds = {}
+DevTools.inputHookInstalled = false
 
 local function logInfo(message, ...)
     Logging.info("%s %s", DevTools.LOG_PREFIX, string.format(message, ...))
@@ -15,7 +16,7 @@ local function logWarning(message, ...)
     Logging.warning("%s %s", DevTools.LOG_PREFIX, string.format(message, ...))
 end
 
-local function safeCall(label, fn, ...)
+local function safeCall(fn, ...)
     if fn == nil then
         return "<function unavailable>"
     end
@@ -122,12 +123,12 @@ function DevTools:dumpNode(nodeId, hitData, repeated)
         Logging.info("%s shapeId: %s", self.LOG_PREFIX, tostring(hitData.shapeId))
     end
 
-    Logging.info("%s rigidBodyType: %s", self.LOG_PREFIX, safeCall("getRigidBodyType", getRigidBodyType, nodeId))
-    Logging.info("%s hasCollision: %s", self.LOG_PREFIX, safeCall("getHasCollision", getHasCollision, nodeId))
-    Logging.info("%s hasTrigger: %s", self.LOG_PREFIX, safeCall("getHasTrigger", getHasTrigger, nodeId))
-    Logging.info("%s addedToPhysics: %s", self.LOG_PREFIX, safeCall("getIsAddedToPhysics", getIsAddedToPhysics, nodeId))
-    Logging.info("%s isCompound: %s", self.LOG_PREFIX, safeCall("getIsCompound", getIsCompound, nodeId))
-    Logging.info("%s isCompoundChild: %s", self.LOG_PREFIX, safeCall("getIsCompoundChild", getIsCompoundChild, nodeId))
+    Logging.info("%s rigidBodyType: %s", self.LOG_PREFIX, safeCall(getRigidBodyType, nodeId))
+    Logging.info("%s hasCollision: %s", self.LOG_PREFIX, safeCall(getHasCollision, nodeId))
+    Logging.info("%s hasTrigger: %s", self.LOG_PREFIX, safeCall(getHasTrigger, nodeId))
+    Logging.info("%s addedToPhysics: %s", self.LOG_PREFIX, safeCall(getIsAddedToPhysics, nodeId))
+    Logging.info("%s isCompound: %s", self.LOG_PREFIX, safeCall(getIsCompound, nodeId))
+    Logging.info("%s isCompoundChild: %s", self.LOG_PREFIX, safeCall(getIsCompoundChild, nodeId))
 
     local filterOk, group, mask = pcall(getCollisionFilter, nodeId)
     if filterOk then
@@ -148,7 +149,14 @@ function DevTools:dumpNode(nodeId, hitData, repeated)
             break
         end
 
-        Logging.info("%s   [%d] id=%s name='%s' rigidBodyType=%s", self.LOG_PREFIX, depth, tostring(currentNode), getNodeName(currentNode), safeCall("getRigidBodyType", getRigidBodyType, currentNode))
+        Logging.info(
+            "%s   [%d] id=%s name='%s' rigidBodyType=%s",
+            self.LOG_PREFIX,
+            depth,
+            tostring(currentNode),
+            getNodeName(currentNode),
+            safeCall(getRigidBodyType, currentNode)
+        )
 
         local parentOk, parentNode = pcall(getParent, currentNode)
         if not parentOk or parentNode == nil or parentNode == 0 or parentNode == currentNode then
@@ -239,10 +247,18 @@ function DevTools:repeatLastDump()
 end
 
 function DevTools:onInspectAction(actionName, inputValue, callbackState, isAnalog)
+    if inputValue ~= nil and inputValue <= 0 then
+        return
+    end
+
     self:inspectObject()
 end
 
 function DevTools:onRepeatAction(actionName, inputValue, callbackState, isAnalog)
+    if inputValue ~= nil and inputValue <= 0 then
+        return
+    end
+
     self:repeatLastDump()
 end
 
@@ -252,69 +268,88 @@ function DevTools:registerActionEvents()
         return
     end
 
-    self:removeActionEvents()
+    self.actionEventIds = {}
 
-    local successInspect, inspectId = g_inputBinding:registerActionEvent(
-        InputAction.DEVTOOLS_INSPECT_OBJECT,
-        self,
-        self.onInspectAction,
-        false,
-        true,
-        false,
-        true
-    )
+    if InputAction.DEVTOOLS_INSPECT_OBJECT ~= nil then
+        local successInspect, inspectId = g_inputBinding:registerActionEvent(
+            InputAction.DEVTOOLS_INSPECT_OBJECT,
+            self,
+            self.onInspectAction,
+            false,
+            true,
+            false,
+            true,
+            nil,
+            true
+        )
 
-    if successInspect then
-        self.actionEventIds.inspect = inspectId
-        g_inputBinding:setActionEventTextVisibility(inspectId, false)
+        if successInspect and inspectId ~= nil then
+            self.actionEventIds.inspect = inspectId
+            g_inputBinding:setActionEventTextVisibility(inspectId, false)
+        else
+            logWarning("Failed to register DEVTOOLS_INSPECT_OBJECT action")
+        end
     else
-        logWarning("Failed to register DEVTOOLS_INSPECT_OBJECT action")
+        logWarning("InputAction.DEVTOOLS_INSPECT_OBJECT does not exist")
     end
 
-    local successRepeat, repeatId = g_inputBinding:registerActionEvent(
-        InputAction.DEVTOOLS_REPEAT_DUMP,
-        self,
-        self.onRepeatAction,
-        false,
-        true,
-        false,
-        true
-    )
+    if InputAction.DEVTOOLS_REPEAT_DUMP ~= nil then
+        local successRepeat, repeatId = g_inputBinding:registerActionEvent(
+            InputAction.DEVTOOLS_REPEAT_DUMP,
+            self,
+            self.onRepeatAction,
+            false,
+            true,
+            false,
+            true,
+            nil,
+            true
+        )
 
-    if successRepeat then
-        self.actionEventIds.repeatDump = repeatId
-        g_inputBinding:setActionEventTextVisibility(repeatId, false)
+        if successRepeat and repeatId ~= nil then
+            self.actionEventIds.repeatDump = repeatId
+            g_inputBinding:setActionEventTextVisibility(repeatId, false)
+        else
+            logWarning("Failed to register DEVTOOLS_REPEAT_DUMP action")
+        end
     else
-        logWarning("Failed to register DEVTOOLS_REPEAT_DUMP action")
+        logWarning("InputAction.DEVTOOLS_REPEAT_DUMP does not exist")
     end
-
-    logInfo("Action events registered. Inspect=%s Repeat=%s", tostring(successInspect), tostring(successRepeat))
 end
 
-function DevTools:removeActionEvents()
-    if g_inputBinding == nil then
+function DevTools:installInputHook()
+    if self.inputHookInstalled then
         return
     end
 
-    for _, actionEventId in pairs(self.actionEventIds) do
-        if actionEventId ~= nil then
-            g_inputBinding:removeActionEvent(actionEventId)
-        end
+    if PlayerInputComponent == nil or PlayerInputComponent.registerGlobalPlayerActionEvents == nil then
+        logWarning("PlayerInputComponent.registerGlobalPlayerActionEvents is unavailable")
+        return
     end
 
-    self.actionEventIds = {}
+    PlayerInputComponent.registerGlobalPlayerActionEvents = Utils.appendedFunction(
+        PlayerInputComponent.registerGlobalPlayerActionEvents,
+        function(inputComponent, controlling)
+            if inputComponent.player ~= nil and inputComponent.player.isOwner then
+                DevTools:registerActionEvents()
+            end
+        end
+    )
+
+    self.inputHookInstalled = true
+    logInfo("Player input hook installed")
 end
 
 function DevTools:loadMap(mapName)
     logInfo("Loaded on map '%s'", tostring(mapName))
     self.lastHit = nil
-    self:registerActionEvents()
 end
 
 function DevTools:deleteMap()
     logInfo("Unloading")
-    self:removeActionEvents()
+    self.actionEventIds = {}
     self.lastHit = nil
 end
 
+DevTools:installInputHook()
 addModEventListener(DevTools)
