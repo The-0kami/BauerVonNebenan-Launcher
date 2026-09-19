@@ -76,3 +76,4 @@ https://raw.githubusercontent.com/The-0kami/FS25_EconomyRegionalization/main/mod
 modhub:365533
 modhub:368541
 https://github.com/Williwillswisse/AD_reverseToMarker
+modhub:303356
