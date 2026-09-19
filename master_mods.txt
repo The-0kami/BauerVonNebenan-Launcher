@@ -73,6 +73,7 @@ modhub:327821
 https://raw.githubusercontent.com/The-0kami/FS25_EconomyRegionalization/main/FS25_EconomyRegionalization.zip
 https://github.com/The-0kami/FS25_EconomyRegionalization/releases/download/depot-2026-09/FS25_Schneidwerklager_WobbyTec.zip
 https://raw.githubusercontent.com/The-0kami/FS25_EconomyRegionalization/main/FS25_SmartGate_AgricultureScience.zip
+https://raw.githubusercontent.com/The-0kami/FS25_EconomyRegionalization/main/FS25_APS_AgricultureScience.zip
 modhub:365533
 modhub:368541
 https://github.com/Williwillswisse/AD_reverseToMarker
