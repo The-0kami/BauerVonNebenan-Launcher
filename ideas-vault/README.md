@@ -11,3 +11,9 @@ Konzept für ein regionsbasiertes Reisesystem zwischen mehreren FS25-Maps bzw. D
 ➡️ [FS25_MultiMap_RegionTravel.md](./FS25_MultiMap_RegionTravel.md)
 
 Der wichtigste Wiedereinstiegspunkt ist der Proof of Concept für einen automatischen **Server-A → Server-B Wechsel**. Erst danach lohnt sich weitere Infrastruktur.
+
+### FS25 Fußgänger-Kollisionssystem („Flatsch“)
+
+Rekonstruierte Research zur historischen DevTools-Fußgängersuche (14 Nodes ohne nutzbare Kollisions-/Raycast-Treffer), positionsbasierter Erkennung als offenem Konzept und einer späteren, rein lesenden Claude-Untersuchung der nativen Root-/Transformkette. **Pausiert, nicht beauftragt.**
+
+➡️ [LS25_Fussgaenger_Kollisionssystem_Research.md](./LS25_Fussgaenger_Kollisionssystem_Research.md)
