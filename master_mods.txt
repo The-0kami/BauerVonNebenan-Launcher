@@ -98,3 +98,4 @@ modhub:324127
 modhub:328433
 modhub:329874
 https://github.com/ZhooL/FS25_EnhancedVehicle/releases/download/1.1.7.1/FS25_EnhancedVehicle.zip
+modhub:304160
